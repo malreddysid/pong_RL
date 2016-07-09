@@ -18,18 +18,20 @@ BALL_Y_SPEED = 2
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
+screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 
-def drawBall(screen, ballXPos, ballYPos):
+
+def drawBall(ballXPos, ballYPos):
     ball = pygame.Rect(ballXPos, ballYPos, BALL_WIDTH, BALL_HEIGHT)
     pygame.draw.rect(screen, WHITE, ball)
 
 
-def drawPaddle1(screen, paddle1YPos):
+def drawPaddle1(paddle1YPos):
     paddle1 = pygame.Rect(PADDLE_BUFFER, paddle1YPos, PADDLE_WIDTH, PADDLE_HEIGHT)
     pygame.draw.rect(screen, WHITE, paddle1)
 
 
-def drawPaddle2(screen, paddle2YPos):
+def drawPaddle2(paddle2YPos):
     paddle2 = pygame.Rect(WINDOW_WIDTH - PADDLE_BUFFER - PADDLE_WIDTH, paddle2YPos, PADDLE_WIDTH, PADDLE_HEIGHT)
     pygame.draw.rect(screen, WHITE, paddle2)
 
@@ -41,30 +43,32 @@ def updateBall(paddle1YPos, paddle2YPos, ballXPos, ballYPos, ballXDirection, bal
     if (
                         ballXPos <= PADDLE_BUFFER + PADDLE_WIDTH and ballYPos + BALL_HEIGHT >= paddle1YPos and ballYPos - BALL_HEIGHT <= paddle1YPos + PADDLE_HEIGHT):
         ballXDirection = 1
-    elif (ballXPos < 0):
+    elif (ballXPos <= 0):
         # [paddle1YPos, paddle2YPos, ballXPos, ballYPos, ballXDirection, ballYDirection] = initBall()
+        ballXDirection = 1
         score = -1
-        return [paddle1YPos, paddle2YPos, ballXPos, ballYPos, ballXDirection, ballYDirection]
+        return [score, paddle1YPos, paddle2YPos, ballXPos, ballYPos, ballXDirection, ballYDirection]
     if (
                         ballXPos >= WINDOW_WIDTH - PADDLE_WIDTH - PADDLE_BUFFER and ballYPos + BALL_HEIGHT >= paddle2YPos and ballYPos - BALL_HEIGHT <= paddle2YPos + PADDLE_HEIGHT):
         ballXDirection = -1
     elif (ballXPos >= WINDOW_WIDTH - BALL_WIDTH):
         # [paddle1YPos, paddle2YPos, ballXPos, ballYPos, ballXDirection, ballYDirection] = initBall()
+        ballXDirection = -1
         score = 1
-        return [paddle1YPos, paddle2YPos, ballXPos, ballYPos, ballXDirection, ballYDirection]
-    if (ballYPos < 0):
+        return [score, paddle1YPos, paddle2YPos, ballXPos, ballYPos, ballXDirection, ballYDirection]
+    if (ballYPos <= 0):
         ballYPos = 0;
         ballYDirection = 1;
-    elif (ballYPos > WINDOW_HEIGHT - BALL_HEIGHT):
+    elif (ballYPos >= WINDOW_HEIGHT - BALL_HEIGHT):
         ballYPos = WINDOW_HEIGHT - BALL_HEIGHT
         ballYDirection = -1
     return [score, paddle1YPos, paddle2YPos, ballXPos, ballYPos, ballXDirection, ballYDirection]
 
 
 def updatePaddle1(action, paddle1YPos):
-    if (action == 1):
+    if (action[1] == 1):
         paddle1YPos = paddle1YPos - PADDLE_SPEED
-    if (action == -1):
+    if (action[2] == 1):
         paddle1YPos = paddle1YPos + PADDLE_SPEED
     if (paddle1YPos < 0):
         paddle1YPos = 0
@@ -74,9 +78,9 @@ def updatePaddle1(action, paddle1YPos):
 
 
 def updatePaddle2(paddle2YPos, ballYPos):
-    if (paddle2YPos < ballYPos):
+    if (paddle2YPos + PADDLE_HEIGHT/2 < ballYPos + BALL_HEIGHT/2):
         paddle2YPos = paddle2YPos + PADDLE_SPEED
-    if (paddle2YPos > ballYPos):
+    if (paddle2YPos + PADDLE_HEIGHT/2 > ballYPos + BALL_HEIGHT/2):
         paddle2YPos = paddle2YPos - PADDLE_SPEED
     if (paddle2YPos < 0):
         paddle2YPos = 0
@@ -87,8 +91,8 @@ def updatePaddle2(paddle2YPos, ballYPos):
 
 class PongGame:
     def __init__(self):
-        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         num = random.randint(0,9)
+        self.tally = 0
         self.paddle1YPos = WINDOW_HEIGHT / 2 - PADDLE_HEIGHT / 2
         self.paddle2YPos = WINDOW_HEIGHT / 2 - PADDLE_HEIGHT / 2
         self.ballXDirection = 1
@@ -111,25 +115,30 @@ class PongGame:
 
 
     def getPresentFrame(self):
-        self.screen.fill(BLACK)
-        drawPaddle1(self.screen, self.paddle1YPos)
-        drawPaddle2(self.screen, self.paddle2YPos)
-        drawBall(self.screen, self.ballXPos, self.ballYPos)
+        pygame.event.pump()
+        screen.fill(BLACK)
+        drawPaddle1(self.paddle1YPos)
+        drawPaddle2(self.paddle2YPos)
+        drawBall(self.ballXPos, self.ballYPos)
         image_data = pygame.surfarray.array3d(pygame.display.get_surface())
         pygame.display.flip()
         return image_data
 
     def getNextFrame(self, action):
-        #pygame.event.pump()
+        pygame.event.pump()
         score = 0
-        self.screen.fill(BLACK)
+        screen.fill(BLACK)
         self.paddle1YPos = updatePaddle1(action, self.paddle1YPos)
-        drawPaddle1(self.screen, self.paddle1YPos)
+        drawPaddle1(self.paddle1YPos)
         self.paddle2YPos = updatePaddle2(self.paddle2YPos, self.ballYPos)
-        drawPaddle2(self.screen, self.paddle2YPos)
+        drawPaddle2(self.paddle2YPos)
         [score, self.paddle1YPos, self.paddle2YPos, self.ballXPos, self.ballYPos, self.ballXDirection, self.ballYDirection] = updateBall(self.paddle1YPos, self.paddle2YPos, self.ballXPos, self.ballYPos, self.ballXDirection, self.ballYDirection)
-        drawBall(self.screen, self.ballXPos, self.ballYPos)
+        drawBall(self.ballXPos, self.ballYPos)
         image_data = pygame.surfarray.array3d(pygame.display.get_surface())
         pygame.display.flip()
-        print str(self.paddle1YPos) + " " + str(self.paddle2YPos) + " " + str(self.ballYPos)
+        #pygame.display.update()
+        # print str(self.paddle1YPos) + " " + str(self.paddle2YPos) + " " + str(self.ballYPos)
+        #print image_data.shape
+        self.tally = self.tally + score
+        print "Tally is " + str(self.tally)
         return [score, image_data]
